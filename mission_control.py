@@ -5,11 +5,18 @@ import datetime
 
 class Mission:
     def __init__(
-        self, first_departure_duration, last_departure_duration, noise_factor=0.8
+        self,
+        first_departure_duration,
+        last_departure_duration,
+        noise_factor=0.8,
+        date=None,
     ):
         self.first_departure_duration = first_departure_duration
         self.last_departure_duration = last_departure_duration
         self.noise_factor = noise_factor
+        if date is None:
+            date = datetime.datetime.now().date()
+        self.date = date
 
         self.rest_intervals = [30, 90]
         self.mission_duration = 1200
@@ -32,9 +39,10 @@ class Mission:
 
         mission_df = pd.DataFrame(
             {
-                "date": datetime.datetime.now().date(),
+                "date": self.date,
                 "type": ["departure", "rest"] * int(len(mission) / 2),
                 "durations": mission,
+                "ethogram": None,
             }
         )
         mission_df.drop(mission_df.tail(1).index, inplace=True)
