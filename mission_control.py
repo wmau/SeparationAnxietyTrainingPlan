@@ -18,7 +18,7 @@ class Mission:
             date = datetime.datetime.now().date()
         self.date = date
 
-        self.rest_intervals = [30, 90]
+        self.rest_intervals = [30, 91]
         self.mission_duration = 1200
         self.departure_count = int(
             np.floor(
