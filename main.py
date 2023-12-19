@@ -23,13 +23,13 @@ class WritePipeline:
             noise_factor=noise_factor,
             date=date,
         )
-        self.mission = self.M.generate_mission()
 
         self.GS = WriteMission(url)
 
     def run(self):
-        wk = self.GS.get_worksheet(str(self.mission["date"].unique()[0]))
-        self.GS.populate_sheet(wk, self.mission)
+        mission = self.M.generate_mission()
+        wk = self.GS.get_worksheet(str(mission["date"].unique()[0]))
+        self.GS.populate_sheet(wk, mission)
 
 
 if __name__ == "__main__":
