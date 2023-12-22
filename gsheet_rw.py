@@ -30,8 +30,18 @@ ethogram_dictionary = {
 ethogram_conversion = {key: i for i, key in enumerate(ethogram_dictionary.values())}
 
 
-class WriteMission:
+class MissionWriter:
     def __init__(self, url):
+        """
+        Open a Google Sheet, find the appropriate worksheet, and write a dataframe
+        (mission).
+
+        Parameter
+        ---
+        url: str
+            URL to the Google Sheet.
+
+        """
         self.gc = gc
         self.url = url
         self.sh = self.gc.open_by_url(self.url)
@@ -53,6 +63,20 @@ class WriteMission:
         set_column_width(wk, "E", 650)
 
     def add_comma_counter(self, wk, df):
+        """
+        Add a column that shows the number of commas in column E.
+        Column E is the column containing ethogram labels which are
+        comma-separated. Since we are counting one behavior per second,
+        this column helps us ensure the number of observations matches the
+        number of seconds in the departure.
+
+        :parameters
+        ---
+        wk: Worksheet object
+
+        df: pandas DataFrame
+            Mission df. Only needed to find the range of the column logic.
+        """
         wk.update("F1", "comma_count")
         table_len = len(df)
         wk.update(
@@ -65,8 +89,18 @@ class WriteMission:
         )
 
 
-class ReadEthogram:
-    def __init__(self, url, date):
+class EthogramReader:
+    def __init__(self, url, date: str):
+        """
+        Read the ethogram column in the Google Sheet and explode the comma-separated
+        values into individual rows to create a long-form dataframe.
+
+        url: str
+            URL of the Google Sheet.
+
+        date: str
+            Really the worksheet name.
+        """
         self.gc = gc
         self.url = url
         self.date = date
@@ -90,6 +124,17 @@ class ReadEthogram:
         return df
 
     def clean_df(self, df):
+        """
+        Preprocesses the dataframe for plotting:
+        -Filters for departure rows only.
+        -Split comma-separated values and explode.
+        -Add an 'observations' column which is just an index.
+        -Replace the ethogram behavior abbreviation with the full word.
+            -Note this gets replaced again by an integer in EthogramVisualizer.
+
+        :param df:
+        :return:
+        """
         df = df.query("type == 'departure'")
         df["ethogram"] = df["ethogram"].str.split(",")
         df = df.explode("ethogram")
@@ -101,7 +146,18 @@ class ReadEthogram:
 
 class EthogramVisualizer:
     def __init__(self, df):
-        self.df = df.replace(ethogram_conversion)
+        """
+        Contains plotting functions for visualizing ethogram data.
+
+        :parameter
+        ---
+        df: pandas DataFrame
+            Output of EthogramReader.run()
+        """
+        # Replace the string values of ethogram behaviors with an integer.
+        # This is necessary for specifying plot orders of strings.
+        df["ethogram"] = df["ethogram"].replace(ethogram_conversion)
+        self.df = df
 
     # Fix the order of the y axis
     def plot(self, ax=None):
@@ -126,7 +182,7 @@ if __name__ == "__main__":
 
     fig, axs = plt.subplots(1,3,sharey=True, figsize=(12,6))
     for date, ax in zip(dates, axs.flat):
-        E = ReadEthogram(url, date)
+        E = EthogramReader(url, date)
         df = E.run()
 
         df["ethogram"] = df["ethogram"].replace(ethogram_dictionary)
