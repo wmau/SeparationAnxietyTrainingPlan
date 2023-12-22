@@ -12,7 +12,7 @@ class Mission:
         date=None,
     ):
         """
-        
+
         :param first_departure_duration:
         :param last_departure_duration:
         :param noise_factor:
@@ -30,7 +30,12 @@ class Mission:
         self.departure_count = int(
             np.floor(
                 self.mission_duration
-                / (self.last_departure_duration / 2 + np.mean(self.rest_intervals))
+                / (
+                    np.mean(
+                        [self.first_departure_duration, self.last_departure_duration]
+                    )
+                    + np.mean(self.rest_intervals)
+                )
             )
         )
 
@@ -48,7 +53,7 @@ class Mission:
             {
                 "date": self.date,
                 "type": ["departure", "rest"] * int(len(mission) / 2),
-                "triggers": None, # placeholder for triggers TODO
+                "triggers": None,  # placeholder for triggers TODO
                 "durations": mission,
                 "ethogram": None,
             }
