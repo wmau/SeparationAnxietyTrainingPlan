@@ -8,9 +8,16 @@ class Mission:
         self,
         first_departure_duration,
         last_departure_duration,
-        noise_factor=0.8,
+        noise_factor=0.5,
         date=None,
     ):
+        """
+        
+        :param first_departure_duration:
+        :param last_departure_duration:
+        :param noise_factor:
+        :param date:
+        """
         self.first_departure_duration = first_departure_duration
         self.last_departure_duration = last_departure_duration
         self.noise_factor = noise_factor
