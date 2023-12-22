@@ -11,7 +11,7 @@ class WritePipeline:
         first_departure_duration,
         last_departure_duration,
         date=None,
-        noise_factor=0.8,
+        noise_factor=0.5,
         url=url,
     ):
         if date is None:

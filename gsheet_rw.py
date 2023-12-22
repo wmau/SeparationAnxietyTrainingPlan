@@ -2,11 +2,32 @@ import gspread
 from gspread_dataframe import set_with_dataframe, get_as_dataframe
 from gspread_formatting import set_column_width
 import matplotlib.pyplot as plt
+import matplotlib.category as mcat
 
 gc = gspread.service_account(
     r"C:\Users\Wackie\Desktop\Kewpie\true-alliance-408420-3fa666e4c05f.json"
 )
 url = "https://docs.google.com/spreadsheets/d/1P8Rl8HGEIn_lfnzyQlHL4U3znqM2UT24JiRgdh3A-kM/edit#gid=0"
+
+ethogram_dictionary = {
+    "A": "Away",
+    "L": "Lying",
+    "RH": "Resting head",
+    "SI": "Sitting",
+    "SId": "Sitting @ door",
+    "ST": "Stretching",
+    "Sd": "Standing @ door",
+    "S": "Standing",
+    "SC": "Scratching self",
+    "SN": "Sniffing",
+    "PW": "Pawing @ door",
+    "G": "Growling",
+    "P": "Pacing",
+    "BO": "Bork",
+    "B": "Bark!",
+    "BB": "Big bark!!",
+}
+ethogram_conversion = {key: i for i, key in enumerate(ethogram_dictionary.values())}
 
 
 class WriteMission:
@@ -19,7 +40,7 @@ class WriteMission:
         try:
             wks = self.sh.worksheet(sheet_name)
         except:
-            wks = self.sh.add_worksheet(title=sheet_name, rows=40, cols=5)
+            wks = self.sh.add_worksheet(title=sheet_name, rows=40, cols=6)
 
         return wks
 
@@ -29,15 +50,15 @@ class WriteMission:
 
     def write_df(self, wk, df):
         set_with_dataframe(wk, df, 1, 1)
-        set_column_width(wk, "D", 650)
+        set_column_width(wk, "E", 650)
 
     def add_comma_counter(self, wk, df):
-        wk.update("E1", "comma_count")
+        wk.update("F1", "comma_count")
         table_len = len(df)
         wk.update(
-            f"E2:E{table_len+2}",
+            f"F2:F{table_len+2}",
             [
-                [f'=len(D{i})-len(SUBSTITUTE(D{i},",",""))+1']
+                [f'=len(E{i})-len(SUBSTITUTE(E{i},",",""))+1']
                 for i in range(2, table_len + 2)
             ],
             raw=False,
@@ -73,25 +94,43 @@ class ReadEthogram:
         df["ethogram"] = df["ethogram"].str.split(",")
         df = df.explode("ethogram")
         df["observation"] = range(len(df))
+        df["ethogram"] = df["ethogram"].replace(ethogram_dictionary)
 
         return df
 
 
 class EthogramVisualizer:
     def __init__(self, df):
-        self.df = df
-        self.abbrev_dict = {""}
+        self.df = df.replace(ethogram_conversion)
 
-    def plot(self):
-        fig, ax = plt.subplots()
+    # Fix the order of the y axis
+    def plot(self, ax=None):
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.figure
+
         ax.scatter(self.df["observation"], self.df["ethogram"], marker="|")
         ax.set_xlabel("Observation")
         ax.set_ylabel("Behavior")
+        ax.set_yticks(list(ethogram_conversion.values()))
+        ax.set_yticklabels(list(ethogram_dictionary.values()))
+        fig.tight_layout()
+
+        return fig, ax
 
 
 if __name__ == "__main__":
-    E = ReadEthogram(
-        "https://docs.google.com/spreadsheets/d/1P8Rl8HGEIn_lfnzyQlHL4U3znqM2UT24JiRgdh3A-kM/edit#gid=760727155",
-        "2023-12-17",
-    )
-    df = E.run()
+    dates = ["2023-12-17", "2023-12-19", "2023-12-21"]
+    url = "https://docs.google.com/spreadsheets/d/1P8Rl8HGEIn_lfnzyQlHL4U3znqM2UT24JiRgdh3A-kM/edit#gid=760727155"
+
+    fig, axs = plt.subplots(1,3,sharey=True, figsize=(12,6))
+    for date, ax in zip(dates, axs.flat):
+        E = ReadEthogram(url, date)
+        df = E.run()
+
+        df["ethogram"] = df["ethogram"].replace(ethogram_dictionary)
+        EthogramVisualizer(df).plot(ax)
+        ax.set_title(date)
+
+    fig.tight_layout()

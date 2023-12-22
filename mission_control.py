@@ -41,6 +41,7 @@ class Mission:
             {
                 "date": self.date,
                 "type": ["departure", "rest"] * int(len(mission) / 2),
+                "triggers": None, # placeholder for triggers TODO
                 "durations": mission,
                 "ethogram": None,
             }
