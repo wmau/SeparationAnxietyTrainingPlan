@@ -10,6 +10,7 @@ class MissionGenerator:
         last_departure_duration,
         noise_factor=0.5,
         date=None,
+        mission_duration=1200,
     ):
         """
         Create a day's mission. A mission has these characteristics:
@@ -35,6 +36,9 @@ class MissionGenerator:
 
         date: str, datetime.datetime object, or None
             Date to write to dataframe.
+
+        mission_duration: int
+            Length of mission in seconds. Usually 1200 (20 min, but flexible).
         """
         self.first_departure_duration = first_departure_duration
         self.last_departure_duration = last_departure_duration
@@ -42,11 +46,11 @@ class MissionGenerator:
         if date is None:
             date = datetime.datetime.now().date()
         if isinstance(date, str):
-            date = datetime.datetime.strptime(date, "%Y-%m-%d")
+            date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
         self.date = date
 
         self.rest_intervals = [30, 90] #seconds
-        self.mission_duration = 1200 #seconds
+        self.mission_duration = mission_duration #seconds
 
         # Create n departures that would fit in a 20-30 min mission given the
         # departure durations.
@@ -75,7 +79,7 @@ class MissionGenerator:
 
         mission_df = pd.DataFrame(
             {
-                "date": self.date,
+                "date": str(self.date),
                 "type": ["departure", "rest"] * int(len(mission) / 2),
                 "triggers": None,  # placeholder for triggers TODO
                 "durations": mission,
@@ -119,5 +123,5 @@ class MissionGenerator:
 
 
 if __name__ == "__main__":
-    M = MissionGenerator(10, 40, 0.8)
+    M = MissionGenerator(10, 40, noise_factor=0.8)
     M.generate_mission()
