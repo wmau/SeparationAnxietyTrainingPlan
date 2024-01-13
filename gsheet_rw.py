@@ -1,8 +1,7 @@
 import gspread
-from gspread_dataframe import set_with_dataframe, get_as_dataframe
-from gspread_formatting import set_column_width
+import gspread_dataframe
+import gspread_formatting
 import matplotlib.pyplot as plt
-import matplotlib.category as mcat
 
 gc = gspread.service_account(
     r"C:\Users\Wackie\Desktop\Kewpie\true-alliance-408420-3fa666e4c05f.json"
@@ -12,6 +11,8 @@ url = "https://docs.google.com/spreadsheets/d/1P8Rl8HGEIn_lfnzyQlHL4U3znqM2UT24J
 ethogram_dictionary = {
     "A": "Away",
     "L": "Lying",
+    "Ld": "Lying @ door",
+    "PL": "Playing",
     "RH": "Resting head",
     "SI": "Sitting",
     "SId": "Sitting @ door",
@@ -19,6 +20,7 @@ ethogram_dictionary = {
     "Sd": "Standing @ door",
     "S": "Standing",
     "SC": "Scratching self",
+    "W": "Walking",
     "SN": "Sniffing",
     "PW": "Pawing @ door",
     "G": "Growling",
@@ -46,23 +48,28 @@ class MissionWriter:
         self.url = url
         self.sh = self.gc.open_by_url(self.url)
 
-    def get_worksheet(self, sheet_name):
+    def get_worksheet(self, sheet_name="test"):
         try:
             wks = self.sh.worksheet(sheet_name)
+            self.is_new_page = False
         except:
-            wks = self.sh.add_worksheet(title=sheet_name, rows=40, cols=6)
+            wks = self.sh.add_worksheet(title=sheet_name, rows=2000, cols=6)
+            gspread_formatting.set_column_width(wks, "E", 650)
+            self.add_comma_counter(wks)
+
+            self.is_new_page = True
 
         return wks
 
-    def populate_sheet(self, wk, df):
-        self.write_df(wk, df)
-        self.add_comma_counter(wk, df)
+    def populate_sheet(self, wk, df, start_index):
+        self.write_df(wk, df, start_index)
 
-    def write_df(self, wk, df):
-        set_with_dataframe(wk, df, 1, 1)
-        set_column_width(wk, "E", 650)
+    def write_df(self, wk, df, start_index):
+        gspread_dataframe.set_with_dataframe(
+            wk, df, row=start_index, col=1, include_column_header=self.is_new_page
+        )
 
-    def add_comma_counter(self, wk, df):
+    def add_comma_counter(self, wk):
         """
         Add a column that shows the number of commas in column E.
         Column E is the column containing ethogram labels which are
@@ -78,13 +85,9 @@ class MissionWriter:
             Mission df. Only needed to find the range of the column logic.
         """
         wk.update("F1", "comma_count")
-        table_len = len(df)
         wk.update(
-            f"F2:F{table_len+2}",
-            [
-                [f'=len(E{i})-len(SUBSTITUTE(E{i},",",""))+1']
-                for i in range(2, table_len + 2)
-            ],
+            f"F2:F2000",
+            [[f'=len(E{i})-len(SUBSTITUTE(E{i},",",""))+1'] for i in range(2, 2000)],
             raw=False,
         )
 
@@ -106,10 +109,12 @@ class EthogramReader:
         self.date = date
         self.sh = self.gc.open_by_url(self.url)
 
-    def run(self):
+    def run(self, explode_ethogram=True):
         wks = self.get_sheet(self.date)
         df = self.get_df(wks)
-        df = self.clean_df(df)
+
+        if explode_ethogram:
+            df = self.explode_ethogram(df)
 
         return df
 
@@ -123,7 +128,7 @@ class EthogramReader:
 
         return df
 
-    def clean_df(self, df):
+    def explode_ethogram(self, df):
         """
         Preprocesses the dataframe for plotting:
         -Filters for departure rows only.
@@ -177,10 +182,11 @@ class EthogramVisualizer:
 
 
 if __name__ == "__main__":
-    dates = ["2023-12-17", "2023-12-19", "2023-12-21"]
+    sh = gc.open_by_url(url)
+    dates = [wk.title for wk in sh.worksheets()]
     url = "https://docs.google.com/spreadsheets/d/1P8Rl8HGEIn_lfnzyQlHL4U3znqM2UT24JiRgdh3A-kM/edit#gid=760727155"
 
-    fig, axs = plt.subplots(1,3,sharey=True, figsize=(12,6))
+    fig, axs = plt.subplots(1, len(dates), sharey=True, sharex=True, figsize=(12, 6))
     for date, ax in zip(dates, axs.flat):
         E = EthogramReader(url, date)
         df = E.run()
