@@ -1,19 +1,9 @@
 from mission_control import MissionGenerator
 from gsheet_rw import MissionWriter, EthogramReader, gc
 import datetime
-import gspread_dataframe
+import utils
 
 url = "https://docs.google.com/spreadsheets/d/1P8Rl8HGEIn_lfnzyQlHL4U3znqM2UT24JiRgdh3A-kM/edit#gid=0"
-
-def get_as_dataframe(wks):
-    df = gspread_dataframe.get_as_dataframe(wks)
-
-    # This line matches the df indices to the row numbers on Gsheets.
-    # GSheet is not 0-indexed, so we add one.
-    # Reading it in as a df makes the first row the header so we "lose" a row.
-    df.index = df.index + 2
-
-    return df
 
 class WritePipeline:
     def __init__(
@@ -57,7 +47,7 @@ class WritePipeline:
     def append_mission(self):
         mission = self.M.generate_mission()
 
-        df = get_as_dataframe(self.wks)
+        df = utils.get_as_dataframe(self.wks)
         start_index = df.index[df.iloc[:,:1].isnull().all(axis=1)][0]
 
         self.GS.populate_sheet(self.wks, mission, start_index)
@@ -70,7 +60,7 @@ class WritePipeline:
         :return:
         """
         # Read worksheet in as dataframe.
-        df = get_as_dataframe(self.wks)
+        df = utils.get_as_dataframe(self.wks)
 
         # Find rows for today's date.
         rows = df.index[df["date"] == self.date]
@@ -84,28 +74,27 @@ class WritePipeline:
 
 
 class ReadPipeline:
-    def __init__(self, url, dates="all"):
+    def __init__(self, url=url, worksheet_name="Data"):
         self.url = url
+        self.worksheet_name = worksheet_name
         self.gc = gc
         self.sh = self.gc.open_by_url(self.url)
+        self.wks = self.sh.worksheet(worksheet_name)
 
-        if dates == "all":
-            self.dates = [worksheet.title for worksheet in self.sh.worksheets()]
-        else:
-            self.dates = dates
+    def read(self, explode_ethogram=True):
+        df = EthogramReader(self.url, self.worksheet_name).run(explode_ethogram)
 
-    def read_worksheets(self):
-        df_list = [EthogramReader(url, date).run() for date in self.dates]
-
-        return df_list
-
-    def read_worksheets_condensed(self):
-        df_list = [
-            EthogramReader(url, date).run(explode_ethogram=False) for date in self.dates
-        ]
-
-        return df_list
+        return df
 
 if __name__ == "__main__":
-    P = WritePipeline(16, 80, noise_factor=0.5)
-    P.run()
+    R = ReadPipeline()
+    df = R.read(explode_ethogram=True)
+    condensed = R.read(explode_ethogram=False)
+
+    from plotting import plot_departures, EthogramVisualizer
+    plot_departures(condensed, 15)
+
+    E = EthogramVisualizer(df)
+    E.plot_ethogram()
+    E.plot_percent_behavior("Away")
+    E.plot_percent_behavior("Lying")

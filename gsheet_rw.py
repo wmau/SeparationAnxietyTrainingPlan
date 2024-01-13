@@ -1,7 +1,7 @@
 import gspread
 import gspread_dataframe
 import gspread_formatting
-import matplotlib.pyplot as plt
+import utils
 
 gc = gspread.service_account(
     r"C:\Users\Wackie\Desktop\Kewpie\true-alliance-408420-3fa666e4c05f.json"
@@ -29,8 +29,6 @@ ethogram_dictionary = {
     "B": "Bark!",
     "BB": "Big bark!!",
 }
-ethogram_conversion = {key: i for i, key in enumerate(ethogram_dictionary.values())}
-
 
 class MissionWriter:
     def __init__(self, url):
@@ -94,7 +92,7 @@ class MissionWriter:
 
 
 class EthogramReader:
-    def __init__(self, url, date: str):
+    def __init__(self, url, worksheet_name):
         """
         Read the ethogram column in the Google Sheet and explode the comma-separated
         values into individual rows to create a long-form dataframe.
@@ -107,27 +105,17 @@ class EthogramReader:
         """
         self.gc = gc
         self.url = url
-        self.date = date
+        self.worksheet_name = worksheet_name
         self.sh = self.gc.open_by_url(self.url)
+        self.wks = self.sh.worksheet(self.worksheet_name)
 
     def run(self, explode_ethogram=True):
-        wks = self.get_sheet(self.date)
-        df = self.get_df(wks)
+        df = utils.get_as_dataframe(self.wks)
 
         if explode_ethogram:
             df = self.explode_ethogram(df)
 
-        return df
-
-    def get_sheet(self, sheet_name):
-        wks = self.sh.worksheet(sheet_name)
-
-        return wks
-
-    def get_df(self, wks):
-        df = get_as_dataframe(wks)
-
-        return df
+        return df.drop(columns="comma_count")
 
     def explode_ethogram(self, df):
         """
@@ -147,53 +135,11 @@ class EthogramReader:
         df["observation"] = range(len(df))
         df["ethogram"] = df["ethogram"].replace(ethogram_dictionary)
 
-        return df
-
-
-class EthogramVisualizer:
-    def __init__(self, df):
-        """
-        Contains plotting functions for visualizing ethogram data.
-
-        :parameter
-        ---
-        df: pandas DataFrame
-            Output of EthogramReader.run()
-        """
-        # Replace the string values of ethogram behaviors with an integer.
-        # This is necessary for specifying plot orders of strings.
-        df["ethogram"] = df["ethogram"].replace(ethogram_conversion)
-        self.df = df
-
-    # Fix the order of the y axis
-    def plot(self, ax=None):
-        if ax is None:
-            fig, ax = plt.subplots()
-        else:
-            fig = ax.figure
-
-        ax.scatter(self.df["observation"], self.df["ethogram"], marker="|")
-        ax.set_xlabel("Observation")
-        ax.set_ylabel("Behavior")
-        ax.set_yticks(list(ethogram_conversion.values()))
-        ax.set_yticklabels(list(ethogram_dictionary.values()))
-        fig.tight_layout()
-
-        return fig, ax
+        return df.reset_index(drop=True)
 
 
 if __name__ == "__main__":
-    sh = gc.open_by_url(url)
-    dates = [wk.title for wk in sh.worksheets()]
-    url = "https://docs.google.com/spreadsheets/d/1P8Rl8HGEIn_lfnzyQlHL4U3znqM2UT24JiRgdh3A-kM/edit#gid=760727155"
+    from main import ReadPipeline
 
-    fig, axs = plt.subplots(1, len(dates), sharey=True, sharex=True, figsize=(12, 6))
-    for date, ax in zip(dates, axs.flat):
-        E = EthogramReader(url, date)
-        df = E.run()
-
-        df["ethogram"] = df["ethogram"].replace(ethogram_dictionary)
-        EthogramVisualizer(df).plot(ax)
-        ax.set_title(date)
-
-    fig.tight_layout()
+    R = ReadPipeline()
+    df = R.read(explode_ethogram=True)
