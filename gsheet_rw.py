@@ -46,7 +46,7 @@ class MissionWriter:
         self.url = url
         self.sh = self.gc.open_by_url(self.url)
 
-    def get_worksheet(self, sheet_name="test"):
+    def get_worksheet(self, sheet_name="Data"):
         try:
             wks = self.sh.worksheet(sheet_name)
             self.is_new_page = False
