@@ -63,6 +63,7 @@ class MissionWriter:
 
     def populate_sheet(self, wk, df, start_index):
         self.write_df(wk, df, start_index)
+        self.add_comma_counter(wk)
 
     def write_df(self, wk, df, start_index):
         gspread_dataframe.set_with_dataframe(

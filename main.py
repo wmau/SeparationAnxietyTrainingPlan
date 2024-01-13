@@ -5,6 +5,15 @@ import gspread_dataframe
 
 url = "https://docs.google.com/spreadsheets/d/1P8Rl8HGEIn_lfnzyQlHL4U3znqM2UT24JiRgdh3A-kM/edit#gid=0"
 
+def get_as_dataframe(wks):
+    df = gspread_dataframe.get_as_dataframe(wks)
+
+    # This line matches the df indices to the row numbers on Gsheets.
+    # GSheet is not 0-indexed, so we add one.
+    # Reading it in as a df makes the first row the header so we "lose" a row.
+    df.index = df.index + 2
+
+    return df
 
 class WritePipeline:
     def __init__(
@@ -36,19 +45,24 @@ class WritePipeline:
         )
 
         self.GS = MissionWriter(url)
+        self.wks = self.GS.get_worksheet()
 
     def run(self):
+        # Delete today's mission if any exist.
+        self.delete_today()
+
+        # Append today's mission.
+        self.append_mission()
+
+    def append_mission(self):
         mission = self.M.generate_mission()
 
-        # Get the worksheet.
-        wks = self.GS.get_worksheet()
+        df = get_as_dataframe(self.wks)
+        start_index = df.index[df.iloc[:,:1].isnull().all(axis=1)][0]
 
-        # Delete today if any.
-        self.delete_today(wks)
+        self.GS.populate_sheet(self.wks, mission, start_index)
 
-        self.GS.populate_sheet(wks, mission)
-
-    def delete_today(self, wks):
+    def delete_today(self):
         """
         Find any existing rows where date is today and delete.
 
@@ -56,12 +70,7 @@ class WritePipeline:
         :return:
         """
         # Read worksheet in as dataframe.
-        df = gspread_dataframe.get_as_dataframe(wks)
-
-        # This line matches the df indices to the row numbers on Gsheets.
-        # GSheet is not 0-indexed, so we add one.
-        # Reading it in as a df makes the first row the header so we "lose" a row.
-        df.index = df.index + 2
+        df = get_as_dataframe(self.wks)
 
         # Find rows for today's date.
         rows = df.index[df["date"] == self.date]
@@ -71,7 +80,7 @@ class WritePipeline:
             end_index = int(rows[-1])
 
             # Delete.
-            wks.delete_rows(start_index, end_index)
+            self.wks.delete_rows(start_index, end_index)
 
 
 class ReadPipeline:
