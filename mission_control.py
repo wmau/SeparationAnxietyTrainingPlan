@@ -14,7 +14,7 @@ class MissionGenerator:
         self,
         first_departure_duration,
         last_departure_duration,
-        noise_factor=0.5,
+        min_duration_factor=0.5,
         date=None,
         mission_duration=1200,
         add_triggers=True,
@@ -35,7 +35,7 @@ class MissionGenerator:
         last_departure_duration: int
             Upper bound of departure durations (last departure), in seconds.
 
-        noise_factor: float
+        min_duration_factor: float
             From 0-1. For each departure, get x_i from a step function ranging
             from first_departure_duration to last_departure_duration. Then pull from
             a uniform distribution ranging from 0 to noise_factor * x_i and call that
@@ -46,10 +46,13 @@ class MissionGenerator:
 
         mission_duration: int
             Length of mission in seconds. Usually 1200 (20 min, but flexible).
+
+        add_triggers: bool
+            Whether to add triggers to the dataframe. 
         """
         self.first_departure_duration = first_departure_duration
         self.last_departure_duration = last_departure_duration
-        self.noise_factor = noise_factor
+        self.noise_factor = min_duration_factor
         if date is None:
             date = datetime.datetime.now().date()
         if isinstance(date, str):
@@ -152,5 +155,5 @@ class MissionGenerator:
 
 
 if __name__ == "__main__":
-    M = MissionGenerator(10, 40, noise_factor=0.8)
+    M = MissionGenerator(10, 40, min_duration_factor=0.8)
     mission_df = M.generate_mission()
