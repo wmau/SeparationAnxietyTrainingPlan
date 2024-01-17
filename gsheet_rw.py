@@ -25,6 +25,7 @@ ethogram_dictionary = {
     "PW": "Pawing @ door",
     "G": "Growling",
     "P": "Pacing",
+    "WH": "Whining",
     "BO": "Bork",
     "B": "Bark!",
     "BB": "Big bark!!",
