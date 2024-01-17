@@ -2,6 +2,12 @@ import numpy as np
 import pandas as pd
 import datetime
 
+possible_triggers = {
+    "keys": 0.3,
+    "coat": 0.2,
+    "shoes": 0.2,
+}
+
 
 class MissionGenerator:
     def __init__(
@@ -11,6 +17,7 @@ class MissionGenerator:
         noise_factor=0.5,
         date=None,
         mission_duration=1200,
+        add_triggers=True,
     ):
         """
         Create a day's mission. A mission has these characteristics:
@@ -49,8 +56,9 @@ class MissionGenerator:
             date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
         self.date = date
 
-        self.rest_intervals = [30, 90] #seconds
-        self.mission_duration = mission_duration #seconds
+        self.rest_intervals = [30, 90]  # seconds
+        self.mission_duration = mission_duration  # seconds
+        self.add_triggers = add_triggers
 
         # Create n departures that would fit in a 20-30 min mission given the
         # departure durations.
@@ -69,6 +77,11 @@ class MissionGenerator:
     def generate_mission(self):
         rest_intervals = self.generate_rest_intervals()
         departures = self.generate_departures()
+        if self.add_triggers:
+            temp = self.generate_triggers()
+            triggers = [item for sublist in zip(temp, [""]*(len(temp))) for item in sublist]
+        else:
+            triggers = False
 
         # Interleave departures with rest periods.
         mission = np.empty(
@@ -77,16 +90,19 @@ class MissionGenerator:
         mission[::2] = departures
         mission[1::2] = rest_intervals
 
+
         mission_df = pd.DataFrame(
             {
                 "date": str(self.date),
                 "type": ["departure", "rest"] * int(len(mission) / 2),
-                "triggers": None,  # placeholder for triggers TODO
+                "triggers": triggers,
                 "durations": mission,
-                "ethogram": None, # placeholder for manually recorded behaviors
+                "ethogram": None,  # placeholder for manually recorded behaviors
             }
         )
-        mission_df.drop(mission_df.tail(1).index, inplace=True) # Don't need last rest period.
+        mission_df.drop(
+            mission_df.tail(1).index, inplace=True
+        )  # Don't need last rest period.
 
         return mission_df
 
@@ -109,7 +125,7 @@ class MissionGenerator:
         # For each departure, subtract a pseudorandom value.
         departures = []
         for departure in departures_:
-            temp = departure + np.random.randint(-self.noise_factor * departure, 0)
+            temp = round(departure * np.random.uniform(self.noise_factor, 1))
             new_value = (
                 self.first_departure_duration
                 if temp < self.first_departure_duration
@@ -117,11 +133,24 @@ class MissionGenerator:
             )
 
             departures.append(new_value)
-        departures[-1] = self.last_departure_duration # Last departure is always the longest.
+        departures[
+            -1
+        ] = self.last_departure_duration  # Last departure is always the longest.
 
         return np.array(departures)
+
+    def generate_triggers(self):
+        r = np.random.sample(size=(self.departure_count, len(possible_triggers)))
+        r = pd.DataFrame(r, columns=possible_triggers.keys())
+
+        for trigger, threshold in possible_triggers.items():
+            r[trigger] = r[trigger] < threshold
+
+        r["triggers"] = r.apply(lambda x: ",".join(r.columns[x]), axis=1)
+
+        return r["triggers"].tolist()
 
 
 if __name__ == "__main__":
     M = MissionGenerator(10, 40, noise_factor=0.8)
-    M.generate_mission()
+    mission_df = M.generate_mission()
