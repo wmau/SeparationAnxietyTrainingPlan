@@ -48,7 +48,7 @@ class MissionGenerator:
             Length of mission in seconds. Usually 1200 (20 min, but flexible).
 
         add_triggers: bool
-            Whether to add triggers to the dataframe. 
+            Whether to add triggers to the dataframe.
         """
         self.first_departure_duration = first_departure_duration
         self.last_departure_duration = last_departure_duration

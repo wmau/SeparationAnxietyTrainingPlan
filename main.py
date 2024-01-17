@@ -12,7 +12,7 @@ class WritePipeline:
         last_departure_duration,
         date=None,
         mission_duration=1200,
-        noise_factor=0.5,
+        min_duration_factor=0.5,
         url=url,
     ):
         """
@@ -29,7 +29,7 @@ class WritePipeline:
         self.M = MissionGenerator(
             first_departure_duration,
             last_departure_duration,
-            min_duration_factor=noise_factor,
+            min_duration_factor=min_duration_factor,
             date=self.date,
             mission_duration=mission_duration,
         )
