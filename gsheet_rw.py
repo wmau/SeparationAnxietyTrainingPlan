@@ -10,6 +10,8 @@ url = "https://docs.google.com/spreadsheets/d/1P8Rl8HGEIn_lfnzyQlHL4U3znqM2UT24J
 
 ethogram_dictionary = {
     "A": "Away",
+    "WR": "Wriggling",
+    "Ls": "Lying on side",
     "L": "Lying",
     "Ld": "Lying @ door",
     "PL": "Playing",
@@ -26,6 +28,7 @@ ethogram_dictionary = {
     "G": "Growling",
     "P": "Pacing",
     "WH": "Whining",
+    "R": "Ruff",
     "BO": "Bork",
     "B": "Bark!",
     "BB": "Big bark!!",
