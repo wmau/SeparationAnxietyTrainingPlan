@@ -3,9 +3,9 @@ import pandas as pd
 import datetime
 
 possible_triggers = {
-    "keys": 0.3,
-    "coat": 0.2,
-    "shoes": 0.2,
+    "keys": 1,
+    "coat": 1,
+    "shoes": 1,
 }
 
 
